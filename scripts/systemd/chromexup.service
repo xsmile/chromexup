@@ -1,0 +1,8 @@
+[Unit]
+Description=External extension updater for Chromium based browsers
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/chromexup

@@ -1,0 +1,12 @@
+# Configuration file for chromexup.
+
+[main]
+# Parallel download threads.
+# parallel_downloads = 4
+# Remove extensions not defined in the extension section.
+# remove_orphans = False
+
+[extensions]
+# HTTPSEverywhere = gcbommkclmclpchllfjekcdonpmejbdp
+# uBlockOrigin = cjpalhdlnbpafiamejdnhcphjbkeiagm
+# uMatrix = ogfcmafjalglgifnmanfmnieipoejdcf

@@ -1,0 +1,4 @@
+recursive-include scripts *
+include config.ini.example
+include LICENSE
+include README.md

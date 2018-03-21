@@ -1,0 +1,10 @@
+[Unit]
+Description=Run chromexup weekly
+
+[Timer]
+Unit=chromexup.service
+OnCalendar=weekly
+Persistent=true
+
+[Install]
+WantedBy=timers.target
