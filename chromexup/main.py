@@ -129,14 +129,55 @@ def _create(id: str, version: str, data: bytearray) -> None:
         json.dump(pref_data, f)
 
 
+def _default_config_file() -> str:
+    """
+    Construct the default path of the configuration file, depending on the operating system.
+    :return: Path of the configuration file
+    """
+    if sys.platform.startswith('linux'):
+        result = os.path.join(os.environ['HOME'], '.config')
+    elif sys.platform.startswith('darwin'):
+        result = os.path.join(os.environ['HOME'], 'Library/Application Support')
+    else:
+        logger.error('unsupported platform %s', sys.platform)
+        raise RuntimeError
+    return os.path.join(result, chromexup.__name__, 'config.ini')
+
+
+def _extensions_dir(branding: str) -> str:
+    """
+    Construct the path of the extension directory, depending on the operating system.
+    :return: Path of the extension directory
+    """
+    if sys.platform.startswith('linux'):
+        result = os.path.join(os.environ['HOME'], '.config', branding)
+    elif sys.platform.startswith('darwin'):
+        branding = branding.title()
+        result = os.path.join(os.environ['HOME'], 'Library/Application Support', branding)
+    else:
+        logger.error('unsupported platform %s', sys.platform)
+        raise RuntimeError
+    return os.path.join(result, 'External Extensions')
+
+
 def check(cfgfile: str, ext_dir: str) -> None:
     """
     Performs basic checks before updating extensions.
-    :return: Success status
+    :param cfgfile: Configuration file path
+    :param ext_dir: Extension directory
+    :return:
     """
+    # Check configuration file
     if not os.path.exists(cfgfile):
         logger.error('missing configuration file %s', cfgfile)
         exit(1)
+
+    # Check browser user data directory
+    user_data_dir = os.path.dirname(ext_dir)
+    if not os.path.exists(user_data_dir):
+        logger.error('missing browser user data directory %s', user_data_dir)
+        exit(1)
+    # Create 'External Extensions' directory if necessary
     if not os.path.exists(ext_dir):
         logger.info('creating directory %s', ext_dir)
         os.mkdir(ext_dir, 0o755)
@@ -166,7 +207,7 @@ def remove_orphans() -> None:
             os.remove(os.path.join(cfg['extdir'], '%s.crx' % id))
             os.remove(os.path.join(cfg['extdir'], '%s.json' % id))
         except FileNotFoundError as e:
-            logger.error('file not found while removing extension: %s', id)
+            logger.error('file not found while removing extension %s', id)
             logger.debug(e)
 
 
@@ -174,7 +215,7 @@ def parse_config(cfgfile: str) -> None:
     """
     Parses the configuration file and performs basic checks.
     :param cfgfile: Configuration file path
-    :return: Success status
+    :return:
     """
     global cfg
 
@@ -189,40 +230,14 @@ def parse_config(cfgfile: str) -> None:
             exit(1)
 
     # Main section
+    cfg['branding'] = parser['main'].get('branding', 'chromium')
     cfg['threads'] = parser['main'].getint('threads', 4)
     cfg['remove_orphans'] = parser['main'].getboolean('remove_orphans', False)
     # Extensions section
     cfg['extensions'] = [e for e in parser['extensions'].values()]
 
-
-def default_config_file() -> str:
-    """
-    Construct the default path of the configuration file, depending on the operating system.
-    :return: Path of the configuration file
-    """
-    if sys.platform.startswith('linux'):
-        result = os.path.join(os.environ['HOME'], '.config')
-    elif sys.platform.startswith('darwin'):
-        result = os.path.join(os.environ['HOME'], 'Library/Application Support')
-    else:
-        logger.error('unsupported platform %s', sys.platform)
-        raise RuntimeError
-    return os.path.join(result, chromexup.__name__, 'config.ini')
-
-
-def default_extensions_dir() -> str:
-    """
-    Construct the default path of the extension directory, depending on the operating system.
-    :return: Path of the extension directory
-    """
-    if sys.platform.startswith('linux'):
-        result = os.path.join(os.environ['HOME'], '.config/chromium')
-    elif sys.platform.startswith('darwin'):
-        result = os.path.join(os.environ['HOME'], 'Library/Application Support/Chromium')
-    else:
-        logger.error('unsupported platform %s', sys.platform)
-        raise RuntimeError
-    return os.path.join(result, 'External Extensions')
+    # Set extension directory
+    cfg['extdir'] = _extensions_dir(cfg['branding'])
 
 
 def parse_args() -> argparse.Namespace:
@@ -235,10 +250,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=chromexup.__description__)
     parser.add_argument('-c', '--cfgfile',
                         help='path of the configuration file',
-                        dest='cfgfile', default=default_config_file())
-    parser.add_argument('-e', '--extdir',
-                        help='directory for external extensions and preferences files',
-                        dest='extdir', default=default_extensions_dir())
+                        dest='cfgfile', default=_default_config_file())
     parser.add_argument('-v', '--verbose',
                         help='increase output verbosity',
                         action='store_const', dest='loglevel', const=logging.DEBUG,
@@ -248,10 +260,7 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
 
     args.cfgfile = os.path.expandvars(os.path.expanduser(args.cfgfile))
-    args.extdir = os.path.expandvars(os.path.expanduser(args.extdir))
-
     cfg['cfgfile'] = args.cfgfile
-    cfg['extdir'] = args.extdir
 
     return args
 
@@ -267,13 +276,14 @@ def main() -> None:
     # Initialize logging
     logging.basicConfig(format=LOGGING_FORMAT, level=args.loglevel)
 
-    check(args.cfgfile, args.extdir)
-
     # Parse configuration file and get extension IDs
     parse_config(args.cfgfile)
-    extensions = cfg['extensions']
+
+    # Check configuration
+    check(args.cfgfile, cfg['extdir'])
 
     # Process extensions
+    extensions = cfg['extensions']
     logger.info('processing %d extensions', len(extensions))
     pool = ThreadPool(cfg['threads'])
     pool.map(process, extensions)

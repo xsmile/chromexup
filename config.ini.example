@@ -1,9 +1,12 @@
 # Configuration file for chromexup.
 
 [main]
-# Parallel download threads.
+# Name of the browser user data directory, e.g. 'inox' for Inox Browser, 'iridium' for
+# Iridium Browser, 'chromium' for ungoogled-chromium. Default is 'chromium'.
+# branding = chromium
+# Parallel download threads. Default is 4.
 # parallel_downloads = 4
-# Remove extensions not defined in the extension section.
+# Remove extensions not defined in the extension section. Default is False.
 # remove_orphans = False
 
 [extensions]
