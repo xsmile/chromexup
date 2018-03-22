@@ -1,5 +1,5 @@
 [Unit]
-Description=Run chromexup weekly
+Description=Run chromexup daily
 
 [Timer]
 Unit=chromexup.service
