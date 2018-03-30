@@ -20,6 +20,9 @@ from requests.exceptions import RequestException
 
 import chromexup
 
+if sys.platform.startswith('win32'):
+    import winreg
+
 logger = logging.getLogger(__name__)
 
 # Main settings
@@ -28,6 +31,10 @@ USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Ge
 
 # Logging settings
 LOGGING_FORMAT = '[%(levelname)s] %(message)s'
+
+if sys.platform.startswith('win32'):
+    HKEY_ROOT = winreg.HKEY_CURRENT_USER
+    EXT_KEY = 'Software\\Google\\Chrome\\Extensions'
 
 cfg: Dict[str, Any] = {}
 
@@ -55,14 +62,24 @@ def _get_installed_version(id: str) -> str:
     :param id: Extension ID
     :return: Extension version
     """
-    try:
-        with open(os.path.join(cfg['extdir'], '%s.json' % id), 'r') as f:
-            pref_data = json.load(f)
-            if 'external_version' not in pref_data:
-                raise KeyError
-            return pref_data['external_version']
-    except FileNotFoundError:
-        return '0'
+    if sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
+        try:
+            # Get version from preferences file
+            with open(os.path.join(cfg['extdir'], '%s.json' % id), 'r') as f:
+                pref_data = json.load(f)
+                if 'external_version' not in pref_data:
+                    raise KeyError
+                return pref_data['external_version']
+        except FileNotFoundError:
+            return '0'
+    elif sys.platform.startswith('win32'):
+        try:
+            # Get version from registry value
+            with winreg.OpenKey(HKEY_ROOT, EXT_KEY + '\\' + id) as key:
+                version = winreg.QueryValueEx(key, 'version')[0]
+                return version
+        except FileNotFoundError:
+            return '0'
 
 
 def _get_latest_version(id: str) -> Tuple[str, str]:
@@ -122,11 +139,17 @@ def _create(id: str, version: str, data: bytearray) -> None:
     with open(os.path.join(cfg['extdir'], ext_name), 'wb') as f:
         f.write(data)
 
-    # Create preferences file
-    pref_name = '%s.json' % id
-    pref_data = {'external_crx': ext_name, 'external_version': version}
-    with open(os.path.join(cfg['extdir'], pref_name), 'w') as f:
-        json.dump(pref_data, f)
+    if sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
+        # Create preferences file
+        pref_name = '%s.json' % id
+        pref_data = {'external_crx': ext_name, 'external_version': version}
+        with open(os.path.join(cfg['extdir'], pref_name), 'w') as f:
+            json.dump(pref_data, f)
+    elif sys.platform.startswith('win32'):
+        # Create registry key
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, EXT_KEY + '\\' + id) as key:
+            winreg.SetValueEx(key, 'path', 0, winreg.REG_SZ, os.path.join(cfg['extdir'], ext_name))
+            winreg.SetValueEx(key, 'version', 0, winreg.REG_SZ, version)
 
 
 def _default_config_file() -> str:
@@ -138,6 +161,8 @@ def _default_config_file() -> str:
         result = os.path.join(os.environ['HOME'], '.config')
     elif sys.platform.startswith('darwin'):
         result = os.path.join(os.environ['HOME'], 'Library/Application Support')
+    elif sys.platform.startswith('win32'):
+        result = os.path.join(os.environ['AppData'])
     else:
         logger.error('unsupported platform %s', sys.platform)
         raise RuntimeError
@@ -154,6 +179,8 @@ def _extensions_dir(branding: str) -> str:
     elif sys.platform.startswith('darwin'):
         branding = branding.title()
         result = os.path.join(os.environ['HOME'], 'Library/Application Support', branding)
+    elif sys.platform.startswith('win32'):
+        result = os.path.join(os.environ['LocalAppData'], 'Chromium\\User Data')
     else:
         logger.error('unsupported platform %s', sys.platform)
         raise RuntimeError
@@ -200,15 +227,26 @@ def remove_orphans() -> None:
     if not orphans:
         return
 
-    # Remove orphaned extension and preferences files
-    logger.info('removing orphaned extensions: %s', orphans)
-    for id in orphans:
-        try:
-            os.remove(os.path.join(cfg['extdir'], '%s.crx' % id))
-            os.remove(os.path.join(cfg['extdir'], '%s.json' % id))
-        except FileNotFoundError as e:
-            logger.error('file not found while removing extension %s', id)
-            logger.debug(e)
+    logger.info('removing orphans: %s', orphans)
+
+    if sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
+        for id in orphans:
+            try:
+                # Remove orphaned extension and preferences file
+                os.remove(os.path.join(cfg['extdir'], '%s.crx' % id))
+                os.remove(os.path.join(cfg['extdir'], '%s.json' % id))
+            except FileNotFoundError as e:
+                logger.error('file not found while removing extension %s', id)
+                logger.debug(e)
+    elif sys.platform.startswith('win32'):
+        for id in orphans:
+            try:
+                # Remove orphaned extension and registry keys
+                os.remove(os.path.join(cfg['extdir'], '%s.crx' % id))
+                winreg.DeleteKey(HKEY_ROOT, EXT_KEY + '\\' + id)
+            except FileNotFoundError as e:
+                logger.error('file not found while removing extension %s', id)
+                logger.debug(e)
 
 
 def parse_config(cfgfile: str) -> None:
