@@ -1,7 +1,7 @@
 [Unit]
 Description=External extension updater for Chromium based browsers
-After=syslog.target
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
