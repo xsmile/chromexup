@@ -46,7 +46,11 @@ def process(id: str) -> None:
     :return:
     """
     installed_ver = _get_installed_version(id)
-    (latest_ver, url) = _get_latest_version(id)
+    try:
+        (latest_ver, url) = _get_latest_version(id)
+    except FileNotFoundError:
+        return
+
     is_outdated = installed_ver != latest_ver
     logger.debug('id: %s, installed_ver: %s, latest_ver: %s, is_outdated: %s', id,
                  installed_ver, latest_ver, is_outdated)
@@ -96,6 +100,11 @@ def _get_latest_version(id: str) -> Tuple[str, str]:
         logger.error('failed URL request for extension %s', id)
         logger.debug(e)
         os._exit(1)
+
+    if r.status_code == 204:
+        # Extension was probably removed from the Chrome Web Store
+        logger.warning('extension is not downloadable %s', id)
+        raise FileNotFoundError
 
     # Extract the version from the download URL
     url = r.next.url
