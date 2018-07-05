@@ -25,6 +25,7 @@ setup(
         'Intended Audience :: System Administrators',
         'License :: OSI Approved :: MIT License',
         'Operating System :: MacOS',
+        'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX :: Linux',
         'Programming Language :: Python :: 3.6',
         'Topic :: Internet :: WWW/HTTP :: Browsers',
