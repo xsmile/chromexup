@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # Main settings
 WEBSTORE_URL_TPL = 'https://clients2.google.com/service/update2/crx?response=redirect&prodversion=65.0&x=id%3D{}%26installsource%3Dondemand%26uc'
-USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.162 Safari/537.36'
+USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36'
 
 # Logging settings
 LOGGING_FORMAT = '[%(levelname)s] %(message)s'
@@ -163,7 +163,7 @@ def _create(id: str, version: str, data: bytearray) -> None:
 
 def _default_config_file() -> str:
     """
-    Construct the default path of the configuration file, depending on the operating system.
+    Constructs the default path of the configuration file, depending on the operating system.
     :return: Path of the configuration file
     """
     if sys.platform.startswith('linux'):
@@ -180,7 +180,7 @@ def _default_config_file() -> str:
 
 def _extensions_dir(branding: str) -> str:
     """
-    Construct the path of the extension directory, depending on the operating system.
+    Constructs the path of the extension directory, depending on the operating system.
     :return: Path of the extension directory
     """
     if sys.platform.startswith('linux'):
@@ -189,7 +189,7 @@ def _extensions_dir(branding: str) -> str:
         branding = branding.title()
         result = os.path.join(os.environ['HOME'], 'Library/Application Support', branding)
     elif sys.platform.startswith('win32'):
-        result = os.path.join(os.environ['LocalAppData'], 'Chromium\\User Data')
+        result = os.path.join(os.environ['AppData'], chromexup.__name__)
     else:
         logger.error('unsupported platform %s', sys.platform)
         raise RuntimeError
