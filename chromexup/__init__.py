@@ -1,5 +1,5 @@
 __name__ = 'chromexup'
-__version__ = '0.4.4'
+__version__ = '0.5.0'
 __description__ = 'External extension updater for Chromium based browsers'
 __url__ = 'https://github.com/xsmile/chromexup'
 __author__ = 'xsmile'
