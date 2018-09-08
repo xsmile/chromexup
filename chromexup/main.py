@@ -13,7 +13,7 @@ import os
 import re
 import sys
 from multiprocessing.dummy import Pool as ThreadPool
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 import requests
 from requests.exceptions import RequestException
@@ -36,7 +36,7 @@ if sys.platform.startswith('win32'):
     HKEY_ROOT = winreg.HKEY_CURRENT_USER
     EXT_KEY = 'Software\\Google\\Chrome\\Extensions'
 
-cfg: Dict[str, Any] = {}
+cfg: Dict[str, Any] = None
 
 
 def process(id: str) -> None:
@@ -118,7 +118,7 @@ def _get_latest_version(id: str) -> Tuple[str, str]:
     return version, url
 
 
-def _download(url) -> bytearray:
+def _download(url: str) -> bytearray:
     """
     Downloads an extension and returns its contents.
     :param url: Download URL
@@ -161,10 +161,10 @@ def _create(id: str, version: str, data: bytearray) -> None:
             winreg.SetValueEx(key, 'version', 0, winreg.REG_SZ, version)
 
 
-def _default_config_file() -> str:
+def _config_dir() -> str:
     """
-    Constructs the default path of the configuration file, depending on the operating system.
-    :return: Path of the configuration file
+    Constructs the path of the configuration directory, depending on the operating system.
+    :return: Path of the configuration directory
     """
     if sys.platform.startswith('linux'):
         result = os.path.join(os.environ['HOME'], '.config')
@@ -175,7 +175,7 @@ def _default_config_file() -> str:
     else:
         logger.error('unsupported platform %s', sys.platform)
         raise RuntimeError
-    return os.path.join(result, chromexup.__name__, 'config.ini')
+    return os.path.join(result, chromexup.__name__)
 
 
 def _extensions_dir(branding: str) -> str:
@@ -189,6 +189,8 @@ def _extensions_dir(branding: str) -> str:
         branding = branding.title()
         result = os.path.join(os.environ['HOME'], 'Library/Application Support', branding)
     elif sys.platform.startswith('win32'):
+        # Windows does not load extensions from the 'External Extensions' directory,
+        # store them in %AppData% instead
         result = os.path.join(os.environ['AppData'], chromexup.__name__)
     else:
         logger.error('unsupported platform %s', sys.platform)
@@ -258,13 +260,12 @@ def remove_orphans() -> None:
                 logger.debug(e)
 
 
-def parse_config(cfgfile: str) -> None:
+def parse_config(cfgfile: str) -> Dict[str, Any]:
     """
-    Parses the configuration file and performs basic checks.
+    Performs basic checks and parses the configuration file.
     :param cfgfile: Configuration file path
-    :return:
+    :return Dictionary containing the configuration options
     """
-    global cfg
 
     sections = ['main', 'extensions']
     parser = configparser.ConfigParser()
@@ -276,15 +277,18 @@ def parse_config(cfgfile: str) -> None:
             logger.error('missing section in configuration file: [%s]', s)
             exit(1)
 
-    # Main section
-    cfg['branding'] = parser['main'].get('branding', 'chromium')
-    cfg['threads'] = parser['main'].getint('threads', 4)
-    cfg['remove_orphans'] = parser['main'].getboolean('remove_orphans', False)
-    # Extensions section
-    cfg['extensions'] = [e for e in parser['extensions'].values()]
-
+    cfg = {
+        # Main section
+        'branding': parser['main'].get('branding', 'chromium'),
+        'threads': parser['main'].getint('threads', 4),
+        'remove_orphans': parser['main'].getboolean('remove_orphans', False),
+        # Extensions section
+        'extensions': [e for e in parser['extensions'].values()]
+    }
     # Set extension directory
     cfg['extdir'] = _extensions_dir(cfg['branding'])
+
+    return cfg
 
 
 def parse_args() -> argparse.Namespace:
@@ -295,9 +299,6 @@ def parse_args() -> argparse.Namespace:
     global cfg
 
     parser = argparse.ArgumentParser(description=chromexup.__description__)
-    parser.add_argument('-c', '--cfgfile',
-                        help='path of the configuration file',
-                        dest='cfgfile', default=_default_config_file())
     parser.add_argument('-v', '--verbose',
                         help='increase output verbosity',
                         action='store_const', dest='loglevel', const=logging.DEBUG,
@@ -306,10 +307,13 @@ def parse_args() -> argparse.Namespace:
                         version='%s %s' % (chromexup.__name__, chromexup.__version__))
     args = parser.parse_args()
 
-    args.cfgfile = os.path.expandvars(os.path.expanduser(args.cfgfile))
-    cfg['cfgfile'] = args.cfgfile
-
     return args
+
+
+def get_cfgfiles() -> List[str]:
+    result = glob.glob(os.path.join(_config_dir(), '*.ini'))
+    logger.debug('found %d configuration file(s): %s', len(result), result)
+    return result
 
 
 def main() -> None:
@@ -317,28 +321,32 @@ def main() -> None:
     Main method.
     :return:
     """
+    global cfg
+
     # Parse command line arguments
     args = parse_args()
 
     # Initialize logging
     logging.basicConfig(format=LOGGING_FORMAT, level=args.loglevel)
 
-    # Parse configuration file and get extension IDs
-    parse_config(args.cfgfile)
+    # Parse all configuration files
+    cfgfiles = get_cfgfiles()
+    for cfgfile in cfgfiles:
+        cfg = parse_config(cfgfile)
 
-    # Check configuration
-    check(args.cfgfile, cfg['extdir'])
+        # Check configuration
+        check(cfgfile, cfg['extdir'])
 
-    # Process extensions
-    extensions = cfg['extensions']
-    logger.info('processing %d extensions', len(extensions))
-    pool = ThreadPool(cfg['threads'])
-    pool.map(process, extensions)
-    pool.close()
-    pool.join()
+        # Process extensions
+        extensions = cfg['extensions']
+        logger.info('%s, processing %d extension(s)', os.path.basename(cfgfile), len(extensions))
+        pool = ThreadPool(cfg['threads'])
+        pool.map(process, extensions)
+        pool.close()
+        pool.join()
 
-    # Remove orphans
-    remove_orphans()
+        # Remove orphans
+        remove_orphans()
 
 
 if __name__ == '__main__':
