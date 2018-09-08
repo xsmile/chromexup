@@ -10,11 +10,11 @@ Chromium extensions can be installed inline via the Chrome Web Store or deployed
 
 Linux and macOS versions of Chromium both support loading extensions from the *External Extensions* directory in the Chromium user data folder. The windows version on the other hand supports loading extensions referenced by a static registry key. While the first case supports different sets of extensions for each Chromium user data folder, the second does not and only allows a single set for an OS user.
 
-chromexup uses a configuration file to keep a set of extensions updated and remove orphaned ones, if necessary.
+chromexup uses configuration files to keep different sets of extensions updated and remove orphaned ones, if necessary.
 
 Extensions can be updated automatically by using the various automation scripts.
 
-To avoid various kinds of issues, extensions should be installed and removed by using this tool only.
+To avoid different kinds of issues, extensions should be installed and removed by using this tool only.
 
 ## F.A.Q.
 
@@ -29,8 +29,9 @@ The extension was blacklisted by the browser. To remove it from the blacklist, i
     - Linux: `~/.config/`
     - macOS: `~/Library/Application\ Support/`
     - Windows: `%AppData%/`
-4. Run `chromexup` to verify the tool is working as intended.
-5. Set up automatic updates if necessary (see next section).
+4. Repeat step 3. with a differently named configuration file for another browser variant if needed.
+5. Run `chromexup` to verify the tool is working as intended.
+6. Set up automatic updates if necessary (see next section).
 
 ### Automatic Updates
 
