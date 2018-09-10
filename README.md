@@ -25,10 +25,10 @@ The extension was blacklisted by the browser. To remove it from the blacklist, i
 
 1. Install python3 using a package manager of your choice and add the install directory to `PATH`.
 2. Install chromexup with `python3 setup.py install --optimize=1`.
-3. Create the configuration file `<APP_DATA>/chromexup/config.ini` using the [`template`](config.ini.example) and edit it to your liking. Depending on the OS, the paths for `<APP_DATA>` are as follows:
-    - Linux: `~/.config/`
-    - macOS: `~/Library/Application\ Support/`
-    - Windows: `%AppData%/`
+3. Create the configuration file `<APP_DATA>/chromexup/config.ini` using the [template](config.ini.example) and edit it to your liking. Depending on the OS, the path for `<APP_DATA>` is as follows:
+    - Linux: `~/.config`
+    - macOS: `~/Library/Application\ Support`
+    - Windows: `%AppData%`
 4. Repeat step 3. with a differently named configuration file for another browser variant if needed.
 5. Run `chromexup` to verify the tool is working as intended.
 6. Set up automatic updates if necessary (see next section).
