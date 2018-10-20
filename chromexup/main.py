@@ -25,11 +25,10 @@ if sys.platform.startswith('win32'):
 
 logger = logging.getLogger(__name__)
 
-# Main settings
-WEBSTORE_URL_TPL = 'https://clients2.google.com/service/update2/crx?response=redirect&prodversion=65.0&x=id%3D{}%26installsource%3Dondemand%26uc'
-USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36'
-
-# Logging settings
+# Settings
+WEBSTORE_URL_TPL = 'https://clients2.google.com/service/update2/crx?' \
+    'response=redirect&prodversion=99&acceptformat=crx2,crx3&' \
+    'x=id%3D{}%26installsource%3Dondemand%26uc'
 LOGGING_FORMAT = '[%(levelname)s] %(message)s'
 
 if sys.platform.startswith('win32'):
@@ -94,8 +93,7 @@ def _get_latest_version(id: str) -> Tuple[str, str]:
     """
     # Request URL but do not follow the redirection and do not download the extension
     try:
-        r = requests.get(url=WEBSTORE_URL_TPL.format(id), headers={'User-Agent': USER_AGENT},
-                         allow_redirects=False)
+        r = requests.get(url=WEBSTORE_URL_TPL.format(id), allow_redirects=False)
     except RequestException as e:
         logger.error('failed URL request for extension %s', id)
         logger.debug(e)
@@ -125,7 +123,7 @@ def _download(url: str) -> bytearray:
     :return: Extension contents
     """
     try:
-        r = requests.get(url=url, headers={'User-Agent': USER_AGENT})
+        r = requests.get(url=url)
     except RequestException as e:
         logger.error('download failed')
         logger.debug(e)
