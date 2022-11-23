@@ -1,6 +1,6 @@
 [Unit]
 Description=External extension updater for Chromium based browsers
-After=network-online.target
+After=network-online.target psd-resync.service
 Wants=network-online.target
 
 [Service]
