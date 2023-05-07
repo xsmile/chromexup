@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # Settings
 WEBSTORE_URL_TPL = 'https://clients2.google.com/service/update2/crx?' \
-    'response=redirect&prodversion=99&acceptformat=crx2,crx3&' \
+    'response=redirect&prodversion=199&acceptformat=crx2,crx3&' \
     'x=id%3D{}%26installsource%3Dondemand%26uc'
 LOGGING_FORMAT = '[%(levelname)s] %(message)s'
 

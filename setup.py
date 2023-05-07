@@ -4,17 +4,11 @@ from setuptools import find_packages, setup
 
 import chromexup
 
-
-def read_file(file: str) -> str:
-    with open(file) as f:
-        return f.read()
-
-
 setup(
     name=chromexup.__name__,
     version=chromexup.__version__,
     description=chromexup.__description__,
-    long_description=read_file('README.md'),
+    long_description=open('README.md').read(),
     url=chromexup.__url__,
     author=chromexup.__author__,
     author_email=chromexup.__author_email__,
