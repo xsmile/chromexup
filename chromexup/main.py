@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 
 # Settings
 WEBSTORE_URL_TPL = 'https://clients2.google.com/service/update2/crx?' \
-    'response=redirect&prodversion=199&acceptformat=crx2,crx3&' \
-    'x=id%3D{}%26installsource%3Dondemand%26uc'
+                   'response=redirect&prodversion=199&acceptformat=crx2,crx3&' \
+                   'x=id%3D{}%26installsource%3Dondemand%26uc'
 LOGGING_FORMAT = '[%(levelname)s] %(message)s'
 
 if sys.platform.startswith('win32'):
@@ -106,7 +106,7 @@ def _get_latest_version(id: str) -> Tuple[str, str]:
 
     # Extract the version from the download URL
     url = r.next.url
-    m = re.search(r'extension_([\d_]+).crx', url)
+    m = re.search(r'/[A-Z]+_([\d_]+).crx', url)
     if not m:
         logger.error('extension version not found')
         logger.debug(url)
